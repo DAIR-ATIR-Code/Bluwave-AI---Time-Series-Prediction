@@ -8,12 +8,12 @@ from tensorflow.keras.utils import to_categorical
 
 def load(logger):
     try:
-        data = read_csv(project_dir + '\\data\\interim\\regularized.csv', \
+        data = read_csv(str(project_dir / "interim/regularized.csv"), \
                         parse_dates=True, infer_datetime_format=True, \
                         index_col=0)
         logger.info('Pre-processed data set was loaded.')
     except Exception:
-        logger.error('\\data\\interim\\regularized.csv could not be read.')
+        logger.error('data/interim/regularized.csv could not be read.')
         raise ValueError('DataFrame is empty.')
     return data
 
@@ -60,7 +60,7 @@ def main():
     features = concat([data.iloc[:,2:], hour_df, month_df], axis=1)
     #features = data.iloc[:,2:]
     
-    features.to_csv(project_dir + '\\data\\processed\\all_features.csv')
+    features.to_csv(str(project_dir / "processed/all_features.csv"))
     logger.info('Features were created.')
     
 #%%
@@ -68,7 +68,7 @@ if __name__ == '__main__':
     log_fmt = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     logging.basicConfig(filename='out.log', level=logging.INFO, format=log_fmt)
 
-    project_dir = str(Path(__file__).resolve().parents[2])
+    project_dir = Path(__file__).resolve().parents[2] / "data"
 
     # find .env automagically by walking up directories until it's found, then
     # load up the .env entries as environment variables

@@ -8,10 +8,13 @@ import glob
 
 def load(logger):
     # Integrate all data into one set
-    folders = glob.glob(project_dir + '\\data\\raw\\*\\')
+    folders = glob.glob(str(project_dir / "raw/*/"))
+    if (len(folders) == 0):
+        logger.error('Raw data was not found.')
+        raise FileNotFoundError('Raw data was not found.')
     raw = DataFrame()
     for f in folders:
-        paths = glob.glob(f + '*.csv')
+        paths = glob.glob(str(Path(f) / "*.csv"))
         for p in paths:
             try:
                 month = read_csv(p, skiprows=15, parse_dates=True, \
@@ -33,7 +36,7 @@ def main():
     logger.info('Turning raw data into usable format.')
 
     raw = load(logger) 
-    raw.to_csv(project_dir + '\\data\\interim\\integrated.csv')
+    raw.to_csv(str(project_dir / "interim/integrated.csv"))
     
     # Drop unnecessary date and flag columns
     # Drop Hmdx, Wind Chill, and Weather columns due to sparseness
@@ -48,7 +51,7 @@ def main():
     else:
         logger.info('Raw data set was cleaned.')
         
-    clean.to_csv(project_dir + '\\data\\interim\\clean.csv')
+    clean.to_csv(str(project_dir / "interim/clean.csv"))
     logger.info('Cleaned data set was saved.')
     
     # Scale the measurements
@@ -56,7 +59,7 @@ def main():
     minimum, maximum = reg.iloc[:,2:].min(), reg.iloc[:,2:].max()
     reg.iloc[:,2:] = (reg.iloc[:,2:] - minimum) / (maximum - minimum)
     
-    reg.to_csv(project_dir + '\\data\\interim\\regularized.csv')
+    reg.to_csv(str(project_dir / "interim/regularized.csv"))
     logger.info('Regularized data set was saved.')
    
 #%%
@@ -64,7 +67,7 @@ if __name__ == '__main__':
     log_fmt = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     logging.basicConfig(filename='out.log', level=logging.INFO, format=log_fmt)
 
-    project_dir = str(Path(__file__).resolve().parents[2])
+    project_dir = Path(__file__).resolve().parents[2] / "data"
 
     # find .env automagically by walking up directories until it's found, then
     # load up the .env entries as environment variables

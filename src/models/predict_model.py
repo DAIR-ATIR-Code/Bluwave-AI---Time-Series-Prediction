@@ -9,29 +9,29 @@ from tensorflow import keras
 
 def load(logger):
     try:
-        data = read_csv(project_dir + '\\data\\processed\\select_features.csv', \
+        data = read_csv(str(project_dir / "data/processed/select_features.csv"), \
                         parse_dates=True, infer_datetime_format=True, \
                         index_col=0)
         logger.info('Select features data set was loaded.')
     except Exception:
-        logger.error('\\data\\processed\\select_features.csv could not be read.')
+        logger.error('data/processed/select_features.csv could not be read.')
         raise ValueError('DataFrame is empty.')
           
     try:
-        clean_wspd = read_csv(project_dir + '\\data\\interim\\clean.csv', \
+        clean_wspd = read_csv(str(project_dir / "data/interim/clean.csv"), \
                               parse_dates=True, infer_datetime_format=True, \
                               index_col=0, usecols=['Date/Time', 'Wind Spd (km/h)'])
         logger.info('Pre-normalized data set was loaded.')
     except Exception:
-        logger.error('\\data\\interim\\clean.csv could not be read.')
+        logger.error('data/interim/clean.csv could not be read.')
         raise ValueError('DataFrame is empty.')
         
     try:
-        final_model = keras.models.load_model(project_dir + \
-                                              '\\models\\final_model.hdf5')
+        final_model = keras.models.load_model(str(project_dir / \
+                                                  "models/final_model.hdf5"))
         logger.info('Final model was loaded.')
     except Exception:
-        logger.error('\\models\\final_model.hdf5 could not be loaded.')
+        logger.error('models/final_model.hdf5 could not be loaded.')
         raise ValueError('Model is unavailable.')
         
     return data, clean_wspd, final_model
@@ -61,13 +61,14 @@ def main():
                                index=test_y.index, name='Wind Spd (km/h)')
     
     mse = model.evaluate(test, test_y, verbose=0)
-    print('Testing MSE of final model: {:.8f}'.format(mse))
+    print('>>> Testing MSE of final model: \t{:.8f}'.format(mse))
     
     # Restore original scale of values
     minimum, maximum = float(clean_wspd.min()), float(clean_wspd.max())
     norm_predictions = final_predictions * (maximum - minimum) + minimum
     
-    norm_predictions.to_csv(project_dir + '\\models\\predictions.csv', header=False)
+    norm_predictions.to_csv(str(project_dir / "models/predictions.csv"), \
+                            header=False)
     logger.info('Model predictions saved.')
    
 #%%
@@ -75,7 +76,7 @@ if __name__ == '__main__':
     log_fmt = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     logging.basicConfig(filename='out.log', level=logging.INFO, format=log_fmt)
 
-    project_dir = str(Path(__file__).resolve().parents[2])
+    project_dir = Path(__file__).resolve().parents[2]
 
     # find .env automagically by walking up directories until it's found, then
     # load up the .env entries as environment variables

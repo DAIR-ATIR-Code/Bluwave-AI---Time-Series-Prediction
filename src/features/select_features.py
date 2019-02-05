@@ -8,12 +8,8 @@ from pandas import Series, read_csv
 from tensorflow.keras.optimizers import SGD, Adam, RMSprop
 
 import sys
-sys.path.append(str(Path(__file__).resolve().parents[2]) + '\\src\\models\\')
+sys.path.append(str(Path(__file__).resolve().parents[2] / "src/models/"))
 from train_model import create_and_fit_model
-
-train_end = '2017-12'
-val_start = '2018-01'
-val_end = '2018-06'
 
 
 def backward_search(data, num_features):
@@ -33,7 +29,7 @@ def backward_search(data, num_features):
         feat_round_ranking = feat_scores.sort_values()
         optimal_feature = feat_round_ranking.index[0]
         features.remove(optimal_feature)
-        print(features)
+        #print(features)
     return features
 
 
@@ -55,7 +51,7 @@ def forward_search(data, num_features):
         optimal_feature = feat_round_ranking.index[0]
         features_sub.append(optimal_feature)
         features.remove(optimal_feature)
-        print(features_sub)
+        #print(features_sub)
     return features_sub
 
 
@@ -76,25 +72,29 @@ def forward_search(data, num_features):
 
 
 def run_model_on_feature_subset(data, feat_sub):
+    train_end = '2017-12'
+    val_start = '2018-01'
+    val_end = '2018-06'
+    
     train = data.loc[:train_end, feat_sub]
     validate = data.loc[val_start:val_end, feat_sub]
-    params = {'num_nodes': 64,
+    params = {'num_nodes': 18,
               'activation': 'tanh',
-              'optimizer': SGD(lr=0.01),
+              'optimizer': 'adam',
               'num_epochs': 25,
-              'batch_size': 32}
-    model, hist, metric = create_and_fit_model(train, params, validate)
+              'batch_size': 512}
+    model, hist, metric, sec = create_and_fit_model(train, validate, params)
     return metric
 
 
 def load(logger):
     try:
-        data = read_csv(project_dir + '\\data\\processed\\all_features.csv', \
+        data = read_csv(str(project_dir / "processed/all_features.csv"), \
                         parse_dates=True, infer_datetime_format=True, \
                         index_col=0)
         logger.info('Features data set was loaded.')
     except Exception:
-        logger.error('\\data\\processed\\all_features.csv could not be read.')
+        logger.error('data/processed/all_features.csv could not be read.')
         raise ValueError('DataFrame is empty.')
     return data
 
@@ -112,7 +112,7 @@ def main():
     data = load(logger)
        
     forward = False
-    backward = True
+    backward = False
     #train_end = '2017-12'
     
     # Remove Visibility since it has very low variance (non informative)
@@ -134,19 +134,20 @@ def main():
     select_data = data.loc[:, core_predictors].copy()
     
     if (forward):
-        select_features = forward_search(select_data, 3)
+        select_features = forward_search(select_data, 5)
     elif (backward):
         select_features = backward_search(select_data, 5)
     else:
         select_features = core_predictors
-    print('Core features selected: ')
+    print('>>> Core features selected:')
+    select_features.remove('Wind Spd (km/h)')
     print(select_features)
     
     select_features.extend(extra_predictors)
     select_features.append('Wind Spd (km/h)')
     final_data = data.loc[:, select_features] 
     
-    final_data.to_csv(project_dir + '\\data\\processed\\select_features.csv')
+    final_data.to_csv(str(project_dir / "processed/select_features.csv"))
     logger.info('Features have been selected.')
     
 #%%
@@ -154,7 +155,7 @@ if __name__ == '__main__':
     log_fmt = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     logging.basicConfig(filename='out.log', level=logging.INFO, format=log_fmt)
 
-    project_dir = str(Path(__file__).resolve().parents[2])
+    project_dir = Path(__file__).resolve().parents[2] / "data"
 
     # find .env automagically by walking up directories until it's found, then
     # load up the .env entries as environment variables

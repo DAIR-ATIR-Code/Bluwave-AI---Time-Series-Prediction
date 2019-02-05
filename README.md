@@ -1,4 +1,4 @@
-canarie-time-series-prediction
+﻿canarie-time-series-prediction
 ==============================
 
 A deployable reference solution for DAIR participants to observe and study application of machine learning techniques in time-series predictions.
@@ -20,7 +20,7 @@ Project Organization
     ├── models             <- Trained and serialized models, model predictions, or model summaries
     │
     ├── notebooks          <- Jupyter notebooks. Naming convention is a number (for ordering),
-    │                         the creator's initials, and a short `-` delimited description, e.g.
+    │                         creator initials, and a short `-` delimited description, e.g.
     │                         `1.0-jqp-initial-data-exploration`.
     │
     ├── references         <- Data dictionaries, manuals, and all other explanatory materials.
