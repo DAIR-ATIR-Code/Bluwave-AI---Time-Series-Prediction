@@ -17,7 +17,7 @@ def load(logger):
         paths = glob.glob(str(Path(f) / "*.csv"))
         for p in paths:
             try:
-                month = read_csv(p, skiprows=15, parse_dates=True, \
+                month = read_csv(p, skiprows=15, parse_dates=True,
                                  infer_datetime_format=True, index_col=0)
                 raw = raw.append(month)
             except Exception:
@@ -40,7 +40,7 @@ def main():
     
     # Drop unnecessary date and flag columns
     # Drop Hmdx, Wind Chill, and Weather columns due to sparseness
-    select = raw.iloc[:,[1,3,4,6,8,10,12,14,16]]
+    select = raw.iloc[:, [1, 3, 4, 6, 8, 10, 12, 14, 16]]
 
     # Interpolate missing data
     clean = select.interpolate(method='linear', limit_direction='both')
@@ -56,8 +56,8 @@ def main():
     
     # Scale the measurements
     reg = clean.copy()
-    minimum, maximum = reg.iloc[:,2:].min(), reg.iloc[:,2:].max()
-    reg.iloc[:,2:] = (reg.iloc[:,2:] - minimum) / (maximum - minimum)
+    minimum, maximum = reg.iloc[:, 2:].min(), reg.iloc[:, 2:].max()
+    reg.iloc[:, 2:] = (reg.iloc[:, 2:] - minimum) / (maximum - minimum)
     
     reg.to_csv(str(project_dir / "interim/regularized.csv"))
     logger.info('Regularized data set was saved.')

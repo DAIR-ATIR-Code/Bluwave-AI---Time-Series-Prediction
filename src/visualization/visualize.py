@@ -8,8 +8,8 @@ import matplotlib.pyplot as plt
 
 def load(logger):
     try:
-        clean = read_csv(str(project_dir / "data/interim/clean.csv"), \
-                         parse_dates=True, infer_datetime_format=True, \
+        clean = read_csv(str(project_dir / "data/interim/clean.csv"),
+                         parse_dates=True, infer_datetime_format=True,
                          index_col=0, low_memory=False)
         logger.info('Clean data set was loaded.')
     except Exception:
@@ -17,8 +17,8 @@ def load(logger):
         raise ValueError('DataFrame is empty.')
 
     try:
-        predict = read_csv(str(project_dir / "models/predictions.csv"), \
-                           parse_dates=True, infer_datetime_format=True, \
+        predict = read_csv(str(project_dir / "models/predictions.csv"),
+                           parse_dates=True, infer_datetime_format=True,
                            index_col=0, header=None, names=['Wind Spd (km/h)'])
         logger.info('Predictions data set was loaded.')
     except Exception:
@@ -42,12 +42,12 @@ def main():
     test_y = test.pop('Wind Spd (km/h)')
     predict_y = predict['Wind Spd (km/h)']
         
-    fig, ax = plt.subplots(1,1,figsize=(10,5))
+    fig, ax = plt.subplots(1, 1, figsize=(10, 5))
     ax.plot(test_y)
     ax.plot(predict_y)
     plt.show()
 
-    fig, ax = plt.subplots(1,1,figsize=(10,5))
+    fig, ax = plt.subplots(1, 1, figsize=(10, 5))
     ax.plot(test_y[:45], label='actual')
     ax.plot(predict_y[:45], label='prediction')
     plt.legend()

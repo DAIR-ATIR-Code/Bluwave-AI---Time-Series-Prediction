@@ -9,8 +9,8 @@ from tensorflow import keras
 
 def load(logger):
     try:
-        data = read_csv(str(project_dir / "data/processed/select_features.csv"), \
-                        parse_dates=True, infer_datetime_format=True, \
+        data = read_csv(str(project_dir / "data/processed/select_features.csv"),
+                        parse_dates=True, infer_datetime_format=True,
                         index_col=0)
         logger.info('Select features data set was loaded.')
     except Exception:
@@ -18,16 +18,17 @@ def load(logger):
         raise ValueError('DataFrame is empty.')
           
     try:
-        clean_wspd = read_csv(str(project_dir / "data/interim/clean.csv"), \
-                              parse_dates=True, infer_datetime_format=True, \
-                              index_col=0, usecols=['Date/Time', 'Wind Spd (km/h)'])
+        clean_wspd = read_csv(str(project_dir / "data/interim/clean.csv"),
+                              parse_dates=True, infer_datetime_format=True,
+                              usecols=['Date/Time', 'Wind Spd (km/h)'],
+                              index_col=0)
         logger.info('Pre-normalized data set was loaded.')
     except Exception:
         logger.error('data/interim/clean.csv could not be read.')
         raise ValueError('DataFrame is empty.')
         
     try:
-        final_model = keras.models.load_model(str(project_dir / \
+        final_model = keras.models.load_model(str(project_dir /
                                                   "models/final_model.hdf5"))
         logger.info('Final model was loaded.')
     except Exception:
@@ -57,7 +58,7 @@ def main():
 
 #    trained_predictions = Series(trained_model.predict(test)[:,0], \
 #                                 index=test_y.index, name='Wind Spd (km/h)')
-    final_predictions = Series(model.predict(test)[:,0], \
+    final_predictions = Series(model.predict(test)[:, 0],
                                index=test_y.index, name='Wind Spd (km/h)')
     
     mse = model.evaluate(test, test_y, verbose=0)
@@ -67,7 +68,7 @@ def main():
     minimum, maximum = float(clean_wspd.min()), float(clean_wspd.max())
     norm_predictions = final_predictions * (maximum - minimum) + minimum
     
-    norm_predictions.to_csv(str(project_dir / "models/predictions.csv"), \
+    norm_predictions.to_csv(str(project_dir / "models/predictions.csv"),
                             header=False)
     logger.info('Model predictions saved.')
    

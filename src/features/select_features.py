@@ -89,8 +89,8 @@ def run_model_on_feature_subset(data, feat_sub):
 
 def load(logger):
     try:
-        data = read_csv(str(project_dir / "processed/all_features.csv"), \
-                        parse_dates=True, infer_datetime_format=True, \
+        data = read_csv(str(project_dir / "processed/all_features.csv"),
+                        parse_dates=True, infer_datetime_format=True,
                         index_col=0)
         logger.info('Features data set was loaded.')
     except Exception:
@@ -102,7 +102,7 @@ def load(logger):
 def main():
     """ Performs feature selection on data from (../processed) and saves data
         and winnowed features in (../processed) ready for model training.
-        Feature selection methods available are (a) forward and (b) backward 
+        Feature selection methods available are (a) forward and (b) backward
         recursive search.
     """
 #%%
