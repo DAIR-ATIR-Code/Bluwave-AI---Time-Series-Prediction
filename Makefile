@@ -19,17 +19,17 @@ endif
 # COMMANDS                                                                      #
 #################################################################################
 
-## Make Dataset
+## Make dataset
 data: requirements
 	python src/data/make_dataset.py
 
-## Model Training
+## Do model training
 model: data
 	python src/features/build_features.py
 	python src/features/select_features.py
 	python src/models/train_model.py
 
-## Model Inference
+## Make predictions with trained model
 predictions:
 	python src/models/predict_model.py
 	python src/visualization/visualize.py

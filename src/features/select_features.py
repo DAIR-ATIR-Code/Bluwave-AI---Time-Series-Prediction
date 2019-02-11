@@ -5,7 +5,6 @@ from dotenv import find_dotenv, load_dotenv
 from pandas import Series, read_csv
 #import sklearn.feature_selection as fs
 #from scipy.stats import pearsonr
-from tensorflow.keras.optimizers import SGD, Adam, RMSprop
 
 import sys
 sys.path.append(str(Path(__file__).resolve().parents[2] / "src/models/"))
@@ -78,11 +77,12 @@ def run_model_on_feature_subset(data, feat_sub):
     
     train = data.loc[:train_end, feat_sub]
     validate = data.loc[val_start:val_end, feat_sub]
-    params = {'num_nodes': 18,
-              'activation': 'tanh',
-              'optimizer': 'adam',
-              'num_epochs': 25,
-              'batch_size': 512}
+    params = {'num_hidden': 72,
+              'activation': 'relu',
+              'learn_rate': 0.001,
+              'lambda': 0.01,
+              'dropout': 0.2,
+              'num_epochs': 5000}
     model, hist, metric, sec = create_and_fit_model(train, validate, params)
     return metric
 
@@ -142,7 +142,6 @@ def main():
     print('>>> Core features selected:')
     select_features.remove('Wind Spd (km/h)')
     print(select_features)
-    
     select_features.extend(extra_predictors)
     select_features.append('Wind Spd (km/h)')
     final_data = data.loc[:, select_features] 

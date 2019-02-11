@@ -2,13 +2,17 @@
 import logging
 from pathlib import Path
 from dotenv import find_dotenv, load_dotenv
-from pandas import Series, DataFrame, read_csv
+from pandas import DataFrame, read_csv
 from tensorflow import keras
 from tensorflow.keras import layers
-from tensorflow.keras.optimizers import SGD, Adam, RMSprop
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.regularizers import l2
+from keras import backend
 from itertools import product
 import time
+import os
 
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
 
 def create_and_fit_model(train, validate, params):
     train_y = train.pop('Wind Spd (km/h)')
@@ -16,19 +20,18 @@ def create_and_fit_model(train, validate, params):
     num_inputs = len(train.columns)
     
     model = keras.Sequential()
-    #model.add(layers.Dropout(0.1, input_shape=(num_inputs,)))
-    model.add(layers.Dense(params['num_nodes'],
+    model.add(layers.Dense(params['num_hidden'],
                            activation=params['activation'],
-                           input_dim=num_inputs))
+                           input_dim=num_inputs,
+                           kernel_regularizer=l2(params['lambda'])))
     model.add(layers.Dropout(params['dropout']))
     model.add(layers.Dense(1))
     
-    model.compile(optimizer=params['optimizer'], loss='mse')
+    model.compile(Adam(lr=params['learn_rate']), loss='mse')
     start = time.time()
-    history = model.fit(train, train_y, verbose=0, shuffle=False,
+    history = model.fit(train, train_y, verbose=0, epochs=params['num_epochs'],
                         validation_data=(validate, validate_y),
-                        epochs=params['num_epochs'],
-                        batch_size=params['batch_size'])
+                        batch_size=len(train))
     seconds = time.time() - start
     hist = DataFrame(history.history)
     metric = hist.loc[:, 'val_loss'].iloc[-1]
@@ -63,69 +66,54 @@ def main():
     
     train = data.loc[:train_end]
     validate = data.loc[val_start:val_end]
-    train_all = data.loc[:val_end]
     
-    all_params = {'num_nodes': [16, 36],
-                  #'activation': ['relu'],
-                  'activation': ['tanh', 'relu', 'sigmoid'],
-                  #'optimizer': ['adam'],
-                  'optimizer': ['sgd', 'adam', 'rmsprop'], 
-                  #'optimizer': [Adam(lr=0.1), Adam(lr=0.01), Adam(lr=0.001)],
-                  #'optimizer': [SGD(lr=0.1), Adam(lr=0.1), RMSprop(lr=0.1)],
-                  'dropout': [0.1, 0.2],
-                  'num_epochs': [250, 500],
-                  'batch_size': [96, 216]} #120,168
+    all_params = {'num_hidden': [72],
+                  'activation': ['relu'],
+                  'learn_rate': [0.01, 0.001],
+                  'lambda': [0.01],
+                  'dropout': [0.2],
+                  'num_epochs': [15000]}
     
+    num_gpus = len(backend.tensorflow_backend._get_available_gpus())
+    print('{} GPU(s) available to keras.'.format(num_gpus))
     # Basic grid search
     keys, values = zip(*all_params.items())
-    param_scores = Series(index=product(*values))
+    param_scores = DataFrame(index=product(*values))
     print('>>> Model hyperparameters grid search:')
     count = 0
+    min_model_metric = 1
     print('\r{}/{} configurations'.format(count, len(param_scores)), end='')
     for variation in product(*values):
         params = dict(zip(keys, variation))
         model, history, metric, sec = create_and_fit_model(train.copy(),
                                                            validate.copy(),
                                                            params)
-        param_scores.loc[variation] = metric
+        param_scores.loc[variation, 'loss'] = metric
+        param_scores.loc[variation, 'seconds'] = sec
+        if (metric < min_model_metric):
+            optimal_model = model
+            optimal_history = history
+            min_model_metric = metric
         count = count + 1
         print('\r{}/{} configurations'.format(count, len(param_scores)),
               end='')
     print('')
-    params_ranking = param_scores.sort_values()
+    params_ranking = param_scores.sort_values(by='loss')
     print('>>> Ranking of hyperparameter combinations:')
     print(params_ranking)
-    optimal_params = dict(zip(keys, params_ranking.index[0]))
-    #optimal_params = params
     
     logger.info('Hyperparameters tuned.')
     
-    print('>>> Training neural network on optimal parameters.')
-    model, history, metric, sec = create_and_fit_model(train.copy(),
-                                                       validate.copy(),
-                                                       optimal_params)
-    print('{:.4f} seconds.'.format(sec))
+    optimal_model.save(str(project_dir / "models" / "trained_model.hdf5"))
+    optimal_history.to_csv(str(project_dir / "models/training_history.csv"))
     
-    model.save(str(project_dir / "models/trained_model.hdf5"))
-    history.to_csv(str(project_dir / "models/training_history.csv"))
-    print('>>> Validation MSE of trained model: \t{:.8f}'.format(metric))
-    
-    persist_mse = ((train.loc[:,'Wind Spd (km/h)'] -
-                    train.loc[:,'Wind Spd (km/h) [t-1hr]'])**2).mean()
-    print('>>> Persistence MSE of training set: \t{:.8f}'.format(persist_mse))
-    
-    # Train model on both training and validation data
+    # Feed model validation data
     print('>>> Finalizing neural network on optimal parameters.')
-    train_all_y = train_all.pop('Wind Spd (km/h)')
-    history = model.fit(train_all, train_all_y, verbose=0,
-                        shuffle=False, epochs=optimal_params['num_epochs'],
-                        batch_size=optimal_params['batch_size'])
-    final_history = DataFrame(history.history)
-    metric = final_history.loc[:, 'loss'].iloc[-1]
+    validate_y = validate.pop('Wind Spd (km/h)')
+    optimal_model.fit(validate, validate_y, batch_size=len(validate),
+                      verbose=0, epochs=5000)
     
-    model.save(str(project_dir / "models/final_model.hdf5"))
-    final_history.to_csv(str(project_dir / "models/final_history.csv"))
-    print('>>> Training MSE of final model: \t{:.8f}'.format(metric))
+    optimal_model.save(str(project_dir / "models" / "final_model.hdf5"))
     
     logger.info('Trained model saved.')
    

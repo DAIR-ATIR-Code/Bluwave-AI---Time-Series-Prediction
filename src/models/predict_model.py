@@ -2,10 +2,12 @@
 import logging
 from pathlib import Path
 from dotenv import find_dotenv, load_dotenv
-#import click
 from pandas import Series, read_csv
 from tensorflow import keras
+from numpy import sqrt
+import os
 
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
 
 def load(logger):
     try:
@@ -38,10 +40,16 @@ def load(logger):
     return data, clean_wspd, final_model
 
 
-#@click.command()
-#@click.argument('input_filepath', type=click.Path(exists=True))
-#@click.argument('output_filepath', type=click.Path())
-#def main(input_filepath, output_filepath):
+def unnormalize(x, clean_data):
+    minimum, maximum = float(clean_data.min()), float(clean_data.max())
+    return x * (maximum - minimum) + minimum
+
+
+def rmse(true, predicted):
+    mse = ((true - predicted)**2).mean()
+    return sqrt(mse)
+
+
 def main():
     """ Makes predictions using final trained model in (../models)
         and saves output to (../models).
@@ -54,19 +62,22 @@ def main():
     
     test_start = '2018-07'
     test = data.loc[test_start:]
+    wspd = test.loc[:,['Wind Spd (km/h)', 'Wind Spd (km/h) [t-1hr]']].copy()
     test_y = test.pop('Wind Spd (km/h)')
 
-#    trained_predictions = Series(trained_model.predict(test)[:,0], \
-#                                 index=test_y.index, name='Wind Spd (km/h)')
-    final_predictions = Series(model.predict(test)[:, 0],
-                               index=test_y.index, name='Wind Spd (km/h)')
-    
-    mse = model.evaluate(test, test_y, verbose=0)
-    print('>>> Testing MSE of final model: \t{:.8f}'.format(mse))
+    predictions = Series(model.predict(test)[:, 0], index=test_y.index, 
+                         name='Wind Spd (km/h)')
     
     # Restore original scale of values
-    minimum, maximum = float(clean_wspd.min()), float(clean_wspd.max())
-    norm_predictions = final_predictions * (maximum - minimum) + minimum
+    norm_predictions = unnormalize(predictions, clean_wspd)
+    norm_wspd = unnormalize(wspd, clean_wspd)
+    
+    model_rmse = rmse(norm_wspd.loc[:, 'Wind Spd (km/h)'], norm_predictions)
+    persist_rmse = rmse(norm_wspd.loc[:, 'Wind Spd (km/h)'],
+                      norm_wspd.loc[:, 'Wind Spd (km/h) [t-1hr]'])
+    
+    print('>>> Prediction RMSE: \t{:.4f}'.format(model_rmse))
+    print('>>> Persistence RMSE: \t{:.4f}'.format(persist_rmse))
     
     norm_predictions.to_csv(str(project_dir / "models/predictions.csv"),
                             header=False)

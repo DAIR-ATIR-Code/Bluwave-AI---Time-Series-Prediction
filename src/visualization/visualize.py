@@ -47,9 +47,9 @@ def main():
     ax.plot(predict_y)
     plt.show()
 
-    fig, ax = plt.subplots(1, 1, figsize=(10, 5))
-    ax.plot(test_y[:45], label='actual')
-    ax.plot(predict_y[:45], label='prediction')
+    fig, ax = plt.subplots(1, 1, figsize=(20, 5))
+    ax.plot(test_y[:90], label='actual')
+    ax.plot(predict_y[:90], label='prediction')
     plt.legend()
     plt.show()
    

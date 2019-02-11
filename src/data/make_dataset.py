@@ -9,12 +9,14 @@ import glob
 def load(logger):
     # Integrate all data into one set
     folders = glob.glob(str(project_dir / "raw/*/"))
+    folders.sort()
     if (len(folders) == 0):
         logger.error('Raw data was not found.')
         raise FileNotFoundError('Raw data was not found.')
     raw = DataFrame()
     for f in folders:
         paths = glob.glob(str(Path(f) / "*.csv"))
+        paths.sort()
         for p in paths:
             try:
                 month = read_csv(p, skiprows=15, parse_dates=True,
