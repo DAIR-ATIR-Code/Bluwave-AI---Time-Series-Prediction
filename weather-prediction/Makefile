@@ -34,14 +34,14 @@ predictions:
 	python src/models/predict_model.py
 	python src/visualization/visualize.py
 
-## Delete all compiled Python files
+## Delete all compiled Python files, logs, generated data and models
 clean:
 	find . -type f -name "*.py[co]" -delete
 	find . -type d -name "__pycache__" -delete
+	find . -type d -name "out.log" -delete
 	rm data/interim/*.csv
 	rm data/processed/*.csv
-	rm models/*.csv
-	rm models/*.hdf5
+	rm models/*
 
 ## Lint using flake8
 lint:

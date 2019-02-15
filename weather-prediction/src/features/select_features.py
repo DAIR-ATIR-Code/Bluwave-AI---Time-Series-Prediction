@@ -1,11 +1,7 @@
 # -*- coding: utf-8 -*-
 import logging
 from pathlib import Path
-from dotenv import find_dotenv, load_dotenv
 from pandas import Series, read_csv
-#import sklearn.feature_selection as fs
-#from scipy.stats import pearsonr
-
 import sys
 sys.path.append(str(Path(__file__).resolve().parents[2] / "src/models/"))
 from train_model import create_and_fit_model
@@ -24,11 +20,9 @@ def backward_search(data, num_features):
             features_sub.append('Wind Spd (km/h)')
             metric = run_model_on_feature_subset(data, features_sub)
             feat_scores.loc[feat] = metric
-            #print(features_sub)
         feat_round_ranking = feat_scores.sort_values()
         optimal_feature = feat_round_ranking.index[0]
         features.remove(optimal_feature)
-        #print(features)
     return features
 
 
@@ -44,30 +38,12 @@ def forward_search(data, num_features):
             features_sub.append(feat)
             metric = run_model_on_feature_subset(data, features_sub)
             feat_scores.loc[feat] = metric
-            #print(features_sub)
             features_sub.remove(feat)
         feat_round_ranking = feat_scores.sort_values()
         optimal_feature = feat_round_ranking.index[0]
         features_sub.append(optimal_feature)
         features.remove(optimal_feature)
-        #print(features_sub)
     return features_sub
-
-
-# def do_feat_ranking(data):
-#     y = data.pop('Wind Spd (km/h)')
-#     X = data.copy()
-#     feat_scores = DataFrame(columns=X.columns)
-    
-#     for col in X.columns:
-#         feat_scores.loc['pearson', col] = pearsonr(X.loc[:,col], y)[0]
-#     feat_scores.loc['f-score'] = fs.f_regression(X, y)[0]
-#     feat_scores.loc['mic'] = fs.mutual_info_regression(X, y)
-   
-#     feat_scores_reg = feat_scores.apply(lambda x : x / x.max(), axis=1)
-#     feat_scores_avg = feat_scores_reg.mean(axis=0)
-#     feat_ranking = feat_scores_avg.sort_values(ascending=False)
-#     return feat_ranking
 
 
 def run_model_on_feature_subset(data, feat_sub):
@@ -105,28 +81,15 @@ def main():
         Feature selection methods available are (a) forward and (b) backward
         recursive search.
     """
-#%%
     logger = logging.getLogger(__name__)
     logger.info('Selecting features from clean data.')
 
+    target = 'Wind Spd (km/h)'
     data = load(logger)
        
     forward = False
     backward = False
-    #train_end = '2017-12'
-    
-    # Remove Visibility since it has very low variance (non informative)
-    data.pop('Visibility (km)')
-    # Remove Dew Point Temp since it is highly correlated with Temp
-    data.pop('Dew Point Temp (°C)')
-    
-    #train_data = data.loc[:train_end].copy()
-    #feat_ranking = do_feat_ranking(train_data)
-    
-    # Compare to scikit learn?
-    #kbest = fs.SelectKBest(score_func=fs.mutual_info_regression, k=30).fit_transform(X, y)
-    #feature_scores = kbest.scores_
-    
+        
     core_predictors = list(data.columns[:6])
     extra_predictors = list(data.columns[6:])
     
@@ -139,26 +102,24 @@ def main():
         select_features = backward_search(select_data, 5)
     else:
         select_features = core_predictors
+        
     print('>>> Core features selected:')
-    select_features.remove('Wind Spd (km/h)')
+    select_features.remove(target)
     print(select_features)
+    
     select_features.extend(extra_predictors)
-    select_features.append('Wind Spd (km/h)')
+    select_features.append(target)
     final_data = data.loc[:, select_features] 
     
     final_data.to_csv(str(project_dir / "processed/select_features.csv"))
     logger.info('Features have been selected.')
     
-#%%
+
 if __name__ == '__main__':
     log_fmt = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     logging.basicConfig(filename='out.log', level=logging.INFO, format=log_fmt)
 
     project_dir = Path(__file__).resolve().parents[2] / "data"
-
-    # find .env automagically by walking up directories until it's found, then
-    # load up the .env entries as environment variables
-    load_dotenv(find_dotenv())
 
     main()
     
