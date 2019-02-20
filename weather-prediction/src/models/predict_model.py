@@ -36,7 +36,7 @@ def load(logger, target):
         saver.restore(sess, path)
         logger.info('Trained model was loaded.')
     except Exception:
-        logger.error('models/trained_model could not be loaded.')
+        logger.error('models/trained_model.meta could not be loaded.')
         raise ValueError('Model is unavailable.')
         
     return data, clean_target, sess
@@ -60,15 +60,18 @@ def main():
     logger.info('Making predictions with trained model.')
     
     target = 'Wind Spd (km/h)'
+    test_start = '2018-01'
+
     data, clean_target, sess = load(logger, target)
     
-    test_start = '2018-07'
     test = data.loc[test_start:]
     persistence = test.loc[:, [target, target + ' [t-1hr]']].copy()
     test.pop(target)
 
     X = tf.get_collection('X')[0]
     y_predict = tf.get_collection('y_predict')[0]
+
+    # Make predictions with model on test data
     predict_y = sess.run(y_predict, feed_dict={X: test})[:, 0]
     predictions = Series(predict_y, index=test.index, name=target)
     sess.close()
@@ -77,11 +80,11 @@ def main():
     norm_predictions = unnormalize(predictions, clean_target)
     norm_target = unnormalize(persistence, clean_target)
     
-    model_rmse = rmse(norm_target.loc[:, target], norm_predictions)
+    predict_rmse = rmse(norm_target.loc[:, target], norm_predictions)
     persist_rmse = rmse(norm_target.loc[:, target],
                         norm_target.loc[:, target + ' [t-1hr]'])
     
-    print('>>> Prediction RMSE: \t{:.4f}'.format(model_rmse))
+    print('>>> Prediction RMSE: \t{:.4f}'.format(predict_rmse))
     print('>>> Persistence RMSE: \t{:.4f}'.format(persist_rmse))
     
     norm_predictions.to_csv(str(project_dir / "models/predictions.csv"),

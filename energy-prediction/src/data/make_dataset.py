@@ -29,17 +29,18 @@ def main():
         ready for feature engineering, saved in (../interim).
     """
     logger = logging.getLogger(__name__)
-    logger.info('Turning raw data into useable format.')
+    logger.info('Turning raw data into usable format.')
 
     raw = load(logger)
+    # Configure Datetime indexing
     raw['Hr_Start'] = raw['Hr_End'] - 1
-    dt = raw.apply(lambda x : x['Date'].replace(hour=x['Hr_Start']), axis=1)
+    dt = raw.apply(lambda x: x['Date'].replace(hour=x['Hr_Start']), axis=1)
     raw.set_index(dt, inplace=True)
     raw.index.rename('Datetime', inplace=True)
     raw.to_csv(str(project_dir / "interim/integrated.csv"))
     
-    # Drop RCP and RSP columns due to sparseness
-    clean = raw.drop(columns=['Date', 'Hr_End', 'Hr_Start', 'Max_5min_RCP', 
+    # Drop (a) redundant date and time columns and (b) sparse RSP and RCP columns
+    clean = raw.drop(columns=['Date', 'Hr_End', 'Hr_Start', 'Max_5min_RCP',
                               'Max_5min_RSP', 'Min_5min_RCP', 'Min_5min_RSP'])
     
     if (clean.empty):

@@ -1,0 +1,4 @@
+python src/models/predict_model.py
+>>> Prediction RMSE: 	4.6020
+>>> Persistence RMSE: 	4.9801
+python src/visualization/visualize.py

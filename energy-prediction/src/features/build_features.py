@@ -22,7 +22,7 @@ def main():
         and saves the data and features together in (../processed).
     """
     logger = logging.getLogger(__name__)
-    logger.info('Creating features from clean data.')
+    logger.info('Creating features from data.')
 
     target = 'System_Load'
     data = load(logger)
@@ -47,18 +47,16 @@ def main():
 
     outliers = data.apply(lambda x: x[(x < stats.loc['low', x.name]) |
                                       (x > stats.loc['high', x.name])], axis=0)
-
     data.loc[:, 'Outlier'] = 0
     data.loc[outliers.index, 'Outlier'] = 1
     
     # Identify weekends
     weekends = data.apply(lambda x: x.name.weekday() == 5 or
                           x.name.weekday() == 6, axis=1)
-    
     data.loc[:, 'Weekend'] = 0
     data.loc[weekends.index, 'Weekend'] = 1
     
-    # Create features out of lagged wind speed measurements
+    # Create features out of lagged target measurements
     data[target + ' [t-1hr]'] = data[target].shift(1)
     data[target + ' [t-2hr]'] = data[target].shift(2)
     data[target + ' [t-24hr]'] = data[target].shift(24)

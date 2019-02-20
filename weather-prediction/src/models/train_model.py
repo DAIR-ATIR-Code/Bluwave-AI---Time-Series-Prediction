@@ -20,9 +20,9 @@ def create_model(data, params):
     X = tf.placeholder('float', shape=[None, num_inputs])
     y = tf.placeholder('float', shape=[None, num_outputs])
     
+    # Initialize weights and biases
     w1 = tf.Variable(tf.random_normal([num_inputs, num_hidden], stddev=0.1))
     w2 = tf.Variable(tf.random_normal([num_hidden, num_outputs], stddev=0.1))
-    
     b1 = tf.Variable(tf.zeros([num_hidden]))
     b2 = tf.Variable(tf.zeros([num_outputs]))
     
@@ -31,7 +31,8 @@ def create_model(data, params):
     dropout_layer = tf.nn.dropout(hidden_layer, 1 - params['dropout'])
     y_predict = tf.matmul(dropout_layer, w2) + b2
     
-    # Backward propagation    
+    # Backward propagation
+    # Use MSE as the loss (objective) function
     loss = tf.reduce_mean(tf.square(y - y_predict))
     reg = tf.nn.l2_loss(w1) + tf.nn.l2_loss(w2)
     reg_loss = tf.reduce_mean(loss + params['lambda'] * reg)
@@ -53,7 +54,7 @@ def create_and_fit_model(train, validate, params, target):
     
     start = time.time()
     sess = tf.Session()
-    sess.run(tf.global_variables_initializer())        
+    sess.run(tf.global_variables_initializer())
     for epoch in range(params['num_epochs']):
         sess.run(updates, feed_dict={X: train_X, y: train_y})
 
@@ -65,38 +66,9 @@ def create_and_fit_model(train, validate, params, target):
     metric = hist.loc[epoch, 'validate_loss']
     
     tf.add_to_collection('X', X)
-    tf.add_to_collection('y', y)
     tf.add_to_collection('y_predict', y_predict)
-    tf.add_to_collection('loss', loss)
-    tf.add_to_collection('updates', updates)
     saver = tf.train.Saver(max_to_keep=0)
     return sess, saver, hist, metric, seconds
-
-
-def update_model(data, params, hist, target, num_epochs):
-    data_X = data.drop(columns=[target])
-    data_y = data.loc[:, target][:, newaxis]
-    
-    tf.reset_default_graph()
-    
-    sess = tf.Session()
-    path = str(project_dir / "models/trained_model")
-    saver = tf.train.import_meta_graph(path + ".meta")
-    saver.restore(sess, path)
-    
-    updates = tf.get_collection('updates')[0]
-    X = tf.get_collection('X')[0]
-    y = tf.get_collection('y')[0]
-    loss = tf.get_collection('loss')[0]
-    
-    update_hist = DataFrame(index=arange(num_epochs), columns=['train_loss'])
-    for epoch in range(num_epochs):
-        sess.run(updates, feed_dict={X: data_X, y: data_y})
-        
-        update_hist.loc[epoch, 'train_loss'] = \
-            sess.run(loss, feed_dict={X: data_X, y: data_y})
-    hist = concat([hist, update_hist], ignore_index=True, sort=False)
-    return sess, saver, hist
             
 
 def load(logger):
@@ -112,19 +84,18 @@ def load(logger):
 
 
 def main():
-    """ Tunes an artifical neural network with a grid search of
+    """ Tunes an artificial neural network with a grid search of
         hyperparameters, saving optimal model in (../models)
     """
     logger = logging.getLogger(__name__)
-    logger.info('Tuning artifical neural network.')
+    logger.info('Tuning artificial neural network.')
 
     target = 'Wind Spd (km/h)'
+    train_end = '2016-12'
+    val_start = '2017-01'
+    val_end = '2017-12'
+    
     data = load(logger)
-    
-    train_end = '2017-12'
-    val_start = '2018-01'
-    val_end = '2018-06'
-    
     train = data.loc[:train_end]
     validate = data.loc[val_start:val_end]
     
@@ -132,13 +103,14 @@ def main():
                   'learn_rate': [0.001],
                   'lambda': [0, 0.01],
                   'dropout': [0.2],
-                  'num_epochs': [5000],
+                  'num_epochs': [7500],
                   'activation': [tf.nn.relu]}
     
     devices = [x.device_type for x in device_lib.list_local_devices()]
     num_gpus = devices.count('GPU')
     print('{} GPU(s) available to TensorFlow.'.format(num_gpus))
-    # Basic grid search
+
+    # Basic grid search of hyperparameters
     keys, values = zip(*all_params.items())
     param_scores = DataFrame(index=product(*values))
     print('>>> Model hyperparameters grid search:')
@@ -147,12 +119,12 @@ def main():
     print('\r{}/{} configurations'.format(count, len(param_scores)), end='')
     for variation in product(*values):
         params = dict(zip(keys, variation))
-        sess, saver, history, metric, sec = create_and_fit_model(train, 
-                                                                 validate, 
-                                                                 params, 
+        sess, saver, history, metric, sec = create_and_fit_model(train,
+                                                                 validate,
+                                                                 params,
                                                                  target)
         param_scores.loc[variation, 'loss'] = metric
-        param_scores.loc[variation, 'seconds'] = sec
+        param_scores.loc[variation, 'seconds'] = int(sec)
         if (metric < min_model_metric):
             saver.save(sess, str(project_dir / "models/trained_model"))
             optimal_history = history
@@ -167,16 +139,7 @@ def main():
     print(params_ranking)
     
     logger.info('Hyperparameters tuned.')
-#    optimal_params = dict(zip(keys, params_ranking.index[0]))
-    
-    # Feed model validation data
-#    print('>>> Finalizing neural network on optimal parameters.')
-#    sess, saver, optimal_history = update_model(validate, optimal_params, 
-#                                                optimal_history, target, 5000)
-#    saver.save(sess, str(project_dir / "models/final_model"))
     optimal_history.to_csv(str(project_dir / "models/training_history.csv"))
-#    sess.close()
-    
     logger.info('Trained model saved.')
    
 

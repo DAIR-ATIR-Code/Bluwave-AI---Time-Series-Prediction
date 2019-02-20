@@ -34,23 +34,32 @@ def main():
     logger.info('Visualizing performance of trained model.')
 
     target = 'System_Load'
+    test_start = '2018-07'
+
     clean, predict = load(logger, target)
-    
-    test_start = '2018-09'
     
     test = clean.loc[test_start:]
     test_y = test.pop(target)
     predict_y = predict[target]
         
-    fig, ax = plt.subplots(1, 1, figsize=(10, 5))
-    ax.plot(test_y)
-    ax.plot(predict_y)
+    fig, ax = plt.subplots(1, 1, figsize=(15, 5))
+    ax.plot(test_y, label='actual')
+    ax.plot(predict_y, label='prediction')
+    ax.set_xlabel('Time (hours)')
+    ax.set_ylabel('Load (MW)')
+    plt.title('System Load Time Series (Macro)')
+    plt.legend()
+    plt.savefig(str(project_dir / "reports/figures/load_macro_time_series.png"))
     plt.show()
 
-    fig, ax = plt.subplots(1, 1, figsize=(20, 5))
-    ax.plot(test_y[:90], label='actual')
-    ax.plot(predict_y[:90], label='prediction')
+    fig, ax = plt.subplots(1, 1, figsize=(15, 5))
+    ax.plot(test_y[:180], label='actual')
+    ax.plot(predict_y[:180], label='prediction')
+    ax.set_xlabel('Time (hours)')
+    ax.set_ylabel('Load (MW)')
+    plt.title('System Load Time Series (Micro)')
     plt.legend()
+    plt.savefig(str(project_dir / "reports/figures/load_micro_time_series.png"))
     plt.show()
    
 

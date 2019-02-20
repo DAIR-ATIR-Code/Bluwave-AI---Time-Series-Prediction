@@ -7,16 +7,19 @@ from scipy.stats import pearsonr
 
 
 def do_feat_ranking(data, target):
-    y = data.pop(target)
-    X = data.copy()
+    X = data.drop(columns=[target])
+    y = data.loc[:, target]
     feat_scores = DataFrame(columns=X.columns)
 
+    # Calculate the (a) Pearson correlation coefficient,
+    # (b) f-score, and (c) mutual information for each feature
     for col in X.columns:
-        feat_scores.loc['pearson', col] = pearsonr(X.loc[:,col], y)[0]
+        feat_scores.loc['pearson', col] = pearsonr(X.loc[:, col], y)[0]
     feat_scores.loc['f-score'] = fs.f_regression(X, y)[0]
-    feat_scores.loc['mic'] = fs.mutual_info_regression(X, y)
+    feat_scores.loc['m-info'] = fs.mutual_info_regression(X, y)
 
-    feat_scores_reg = feat_scores.apply(lambda x : x / x.max(), axis=1)
+    # Rank features based on mean of regularized feature scoring metrics
+    feat_scores_reg = feat_scores.apply(lambda x: x / x.max(), axis=1)
     feat_scores_avg = feat_scores_reg.mean(axis=0)
     feat_ranking = feat_scores_avg.sort_values(ascending=False)
     return feat_ranking
@@ -36,23 +39,25 @@ def load(logger):
 
 def main():
     """ Performs feature selection on data from (../processed) and saves data
-        and winnowed features in (../processed) ready for model training.
-        Feature selection method is averaged univariate feature ranking.
+        and selected features in (../processed) ready for model training.
+        Feature selection method is ranking by mean univariate feature scores.
     """
     logger = logging.getLogger(__name__)
-    logger.info('Selecting features from clean data.')
+    logger.info('Selecting features from data.')
 
     target = 'System_Load'
-    data = load(logger)
-    train_end = '2018-04'
+    train_end = '2017-12'
+    num_features = 10
 
+    data = load(logger)
     core_predictors = list(data.columns[:16])
     extra_predictors = list(data.columns[16:])
     
-    train_data = data.loc[:train_end].copy()
-    feat_ranking = do_feat_ranking(train_data[core_predictors], target)
+    # Only run feature selection algorithm on core predictors of training data
+    select_data = data.loc[:train_end, core_predictors]
+    feat_ranking = do_feat_ranking(select_data, target)
     
-    select_features = list(feat_ranking[:10].index)
+    select_features = list(feat_ranking[:num_features].index)
     print('>>> Core features selected:')
     print(select_features)
     

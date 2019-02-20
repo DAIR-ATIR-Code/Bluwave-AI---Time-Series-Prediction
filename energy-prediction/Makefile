@@ -1,4 +1,4 @@
-.PHONY: clean data model requirements
+.PHONY: clean data model predictions create_environment test_environment
 
 #################################################################################
 # GLOBALS                                                                       #
@@ -19,14 +19,14 @@ endif
 # COMMANDS                                                                      #
 #################################################################################
 
-## Make dataset
-data: requirements
+## Make dataset and features
+data:
 	python src/data/make_dataset.py
-
-## Do model training
-model: data
 	python src/features/build_features.py
 	python src/features/select_features.py
+
+## Do model training
+model:
 	python src/models/train_model.py
 
 ## Make predictions with trained model
@@ -34,7 +34,7 @@ predictions:
 	python src/models/predict_model.py
 	python src/visualization/visualize.py
 
-## Delete all compiled Python files
+## Delete all compiled Python files and generated data and models
 clean:
 	find . -type f -name "*.py[co]" -delete
 	find . -type d -name "__pycache__" -delete
@@ -43,10 +43,6 @@ clean:
 	rm data/processed/*.csv
 	rm models/*.csv
 	rm models/*.hdf5
-
-## Lint using flake8
-lint:
-	flake8 src
 
 ## Set up python interpreter environment
 create_environment:

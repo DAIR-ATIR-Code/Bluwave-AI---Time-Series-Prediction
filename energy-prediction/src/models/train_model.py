@@ -21,6 +21,8 @@ def create_and_fit_model(train, validate, params, target):
     validate_y = validate.loc[:, target]
     num_inputs = len(train_X.columns)
     
+    # Build neural network with one hidden layer
+    # Various hyperparameters are given by the values in dictionary 'params'
     model = keras.Sequential()
     model.add(layers.Dense(params['num_hidden'],
                            activation=params['activation'],
@@ -30,6 +32,7 @@ def create_and_fit_model(train, validate, params, target):
     model.add(layers.Dense(1))
     
     model.compile(Adam(lr=params['learn_rate']), loss='mse')
+
     start = time.time()
     history = model.fit(train_X, train_y, verbose=0, epochs=params['num_epochs'],
                         validation_data=(validate_X, validate_y),
@@ -53,19 +56,18 @@ def load(logger):
 
 
 def main():
-    """ Tunes an artifical neural network with a grid search of
+    """ Tunes an artificial neural network with a grid search of
         hyperparameters, saving optimal model in (../models)
     """
     logger = logging.getLogger(__name__)
-    logger.info('Tuning artifical neural network.')
+    logger.info('Tuning artificial neural network.')
 
     target = 'System_Load'
-    data = load(logger)
-
-    train_end = '2018-04'
-    val_start = '2018-05'
-    val_end = '2018-08'
+    train_end = '2017-12'
+    val_start = '2018-01'
+    val_end = '2018-06'
     
+    data = load(logger)
     train = data.loc[:train_end]
     validate = data.loc[val_start:val_end]
     
@@ -73,13 +75,13 @@ def main():
                   'learn_rate': [0.01],
                   'lambda': [0, 0.01],
                   'dropout': [0, 0.2],
-                  'num_epochs': [1000],
+                  'num_epochs': [5000],
                   'activation': ['relu']}
     
     num_gpus = len(backend.tensorflow_backend._get_available_gpus())
     print('{} GPU(s) available to keras.'.format(num_gpus))
     
-    # Basic grid search
+    # Basic grid search of hyperparameters
     keys, values = zip(*all_params.items())
     param_scores = DataFrame(index=product(*values))
     print('>>> Model hyperparameters grid search:')
@@ -91,7 +93,7 @@ def main():
         model, history, metric, sec = create_and_fit_model(train, validate,
                                                            params, target)
         param_scores.loc[variation, 'loss'] = metric
-        param_scores.loc[variation, 'seconds'] = sec
+        param_scores.loc[variation, 'seconds'] = int(sec)
         if (metric < min_model_metric):
             optimal_model = model
             optimal_history = history
@@ -105,18 +107,8 @@ def main():
     print(params_ranking)
     
     logger.info('Hyperparameters tuned.')
-    
     optimal_model.save(str(project_dir / "models" / "trained_model.hdf5"))
     optimal_history.to_csv(str(project_dir / "models/training_history.csv"))
-    
-    # Feed model validation data
-#    print('>>> Finalizing neural network on optimal parameters.')
-#    validate_y = validate.pop(target)
-#    optimal_model.fit(validate, validate_y, batch_size=len(validate),
-#                      verbose=0, epochs=100)
-    
-#    optimal_model.save(str(project_dir / "models" / "final_model.hdf5"))
-    
     logger.info('Trained model saved.')
    
 

@@ -33,13 +33,13 @@ def main():
         ready for feature engineering, saved in (../interim).
     """
     logger = logging.getLogger(__name__)
-    logger.info('Turning raw data into useable format.')
+    logger.info('Turning raw data into usable format.')
 
     raw = load(logger) 
     raw.to_csv(str(project_dir / "interim/integrated.csv"))
     
-    # Drop redundant date and unnecessary flag columns
-    # Drop Hmdx, Wind Chill, and Weather columns due to sparseness
+    # Drop (a) redundant date and time columns, (b) unnecessary flag columns,
+    # (c) sparse Hmdx, Wind Chill, and Weather columns
     select = raw.iloc[:, [4, 6, 8, 10, 12, 14, 16]]
 
     # Interpolate missing data

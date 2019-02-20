@@ -22,13 +22,13 @@ def main():
         and saves the data and features together in (../processed).
     """
     logger = logging.getLogger(__name__)
-    logger.info('Creating features from clean data.')
+    logger.info('Creating features from data.')
 
     target = 'Wind Spd (km/h)'
     data = load(logger)
     
     # Drop columns with extremely high correlation
-    #data.pop('Dew Point Temp (°C)')
+    data.pop('Dew Point Temp (°C)')
     # Drop columns with extremely low variance
     data.pop('Visibility (km)')
     
@@ -40,11 +40,10 @@ def main():
 
     outliers = data.apply(lambda x: x[(x < stats.loc['low', x.name]) |
                             (x > stats.loc['high', x.name])], axis=0)
-
     data.loc[:, 'Outlier'] = 0
     data.loc[outliers.index, 'Outlier'] = 1
     
-    # Create features out of lagged wind speed measurements
+    # Create features out of lagged target measurements
     data[target + ' [t-1hr]'] = data[target].shift(1)
     data[target + ' [t-2hr]'] = data[target].shift(2)
     data[target + ' [t-12hr]'] = data[target].shift(12)

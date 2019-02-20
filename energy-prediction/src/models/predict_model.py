@@ -58,13 +58,15 @@ def main():
     logger.info('Making predictions with trained model.')
     
     target = 'System_Load'
+    test_start = '2018-07'
+
     data, clean_target, model = load(logger, target)
     
-    test_start = '2018-09'
     test = data.loc[test_start:]
     persistence = test.loc[:, [target, target + ' [t-1hr]']].copy()
     test.pop(target)
 
+    # Make predictions with model on test data
     predict_y = model.predict(test)[:, 0]
     predictions = Series(predict_y, index=test.index, name=target)
     
@@ -72,11 +74,11 @@ def main():
     norm_predictions = unnormalize(predictions, clean_target)
     norm_target = unnormalize(persistence, clean_target)
     
-    model_rmse = rmse(norm_target.loc[:, target], norm_predictions)
+    predict_rmse = rmse(norm_target.loc[:, target], norm_predictions)
     persist_rmse = rmse(norm_target.loc[:, target],
                         norm_target.loc[:, target + ' [t-1hr]'])
     
-    print('>>> Prediction RMSE: \t{:.4f}'.format(model_rmse))
+    print('>>> Prediction RMSE: \t{:.4f}'.format(predict_rmse))
     print('>>> Persistence RMSE: \t{:.4f}'.format(persist_rmse))
     
     norm_predictions.to_csv(str(project_dir / "models/predictions.csv"),
