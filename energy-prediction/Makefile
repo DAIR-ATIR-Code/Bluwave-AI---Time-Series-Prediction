@@ -51,9 +51,9 @@ create_environment:
 ifeq (True,$(HAS_CONDA))
 	@echo ">>> Detected conda, creating conda environment."
 ifeq ($(OS),Windows_NT)
-	conda env create -f windows_env.yaml
+	@echo ">>> Windows detected. Please switch to UNIX system."
 else
-	conda env create -f linux_env.yaml
+	conda env create -f env.yaml
 endif
 else
 	@echo ">>> Conda not detected. Please install to proceed."
