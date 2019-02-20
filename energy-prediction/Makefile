@@ -21,7 +21,9 @@ endif
 
 ## Make dataset and features
 data:
+	@gunzip -r data/raw/*
 	python src/data/make_dataset.py
+	@gzip -r data/raw/*
 	python src/features/build_features.py
 	python src/features/select_features.py
 
