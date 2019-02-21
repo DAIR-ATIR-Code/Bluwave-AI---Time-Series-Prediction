@@ -12,14 +12,13 @@ def backward_search(data, target, num_features):
     features = list(data.columns)
     features.remove(target)
     for i in range(0, len(features) - num_features):
+        print(features)
         feat_scores = Series(index=features)
         # Experiment with the removal of each feature
         for feat in features:
             features_sub = features.copy()
             features_sub.remove(feat)
-            # Add target so that model can run properly
-            features_sub.append(target)
-            metric = run_model_on_feature_subset(data, features_sub, target)
+            metric = run_model_on_feature_subset(data, target, features_sub)
             feat_scores.loc[feat] = metric
         feat_round_ranking = feat_scores.sort_values()
         optimal_feature = feat_round_ranking.index[0]
@@ -30,14 +29,14 @@ def backward_search(data, target, num_features):
 def forward_search(data, target, num_features):
     features = list(data.columns)
     features.remove(target)
-    # Keep target so that model can run properly
-    features_sub = [target]
+    features_sub = []
     for i in range(0, num_features):
+        if (i > 0): print(features_sub)
         feat_scores = Series(index=features)
         # Experiment with the addition of each feature
         for feat in features:
             features_sub.append(feat)
-            metric = run_model_on_feature_subset(data, features_sub, target)
+            metric = run_model_on_feature_subset(data, target, features_sub)
             feat_scores.loc[feat] = metric
             features_sub.remove(feat)
         feat_round_ranking = feat_scores.sort_values()
@@ -47,22 +46,26 @@ def forward_search(data, target, num_features):
     return features_sub
 
 
-def run_model_on_feature_subset(data, target, feat_sub):
+def run_model_on_feature_subset(data, target, features_sub):
     train_end = '2016-12'
     val_start = '2017-01'
     val_end = '2017-12'
     
-    train = data.loc[:train_end, feat_sub]
-    validate = data.loc[val_start:val_end, feat_sub]
+    # Add target so that model can run properly
+    columns_sub = features_sub.copy()
+    columns_sub.append(target)
+    train = data.loc[:train_end, columns_sub]
+    validate = data.loc[val_start:val_end, columns_sub]
     # Choose reasonable, but not necessarily optimal, hyperparameters
     params = {'num_hidden': 50,
               'learn_rate': 0.001,
               'lambda': 0,
               'dropout': 0.2,
               'num_epochs': 5000,
-              'activation': [tf.nn.relu]}
-    model, hist, metric, sec = create_and_fit_model(train, validate,
-                                                    params, target)
+              'activation': tf.nn.relu}
+    sess, saver, history, metric, sec = create_and_fit_model(train, validate,
+                                                             params, target)
+    sess.close()
     return metric
 
 
@@ -88,27 +91,27 @@ def main():
     logger.info('Selecting features from data.')
 
     target = 'Wind Spd (km/h)'
-    train_end = '2016-12'
-    num_features = 5
+    num_features = 4
     forward = False
-    backward = False
+    backward = True
 
     data = load(logger)
     core_predictors = list(data.columns[:6])
     extra_predictors = list(data.columns[6:])
     
-    # Only run feature selection algorithm on predictors of training data
-    select_data = data.loc[:train_end, core_predictors]
+    # Only run feature selection algorithm on core predictors
+    select_data = data.loc[:, core_predictors]
     
     if (forward):
+        print('>>> Forward recursive search:')
         select_features = forward_search(select_data, target, num_features)
     elif (backward):
+        print('>>> Backward recursive search:')
         select_features = backward_search(select_data, target, num_features)
     else:
         select_features = core_predictors
         
     print('>>> Core features selected:')
-    select_features.remove(target)
     print(select_features)
     
     select_features.extend(extra_predictors)
