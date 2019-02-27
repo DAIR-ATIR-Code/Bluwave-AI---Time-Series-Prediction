@@ -29,10 +29,6 @@ def main():
     target = 'System_Load'
     data = load(logger)
     
-    # Place all cross-sectional data at lag of 1
-    data = data.shift(1)
-    data[target] = data[target].shift(-1)
-    
     # Drop columns with extremely high correlation
     data.drop(columns=['RT_Demand', 'DA_LMP', 'RT_LMP'], inplace=True)
     # Drop columns with extremely low variance
