@@ -11,8 +11,9 @@ def do_feat_ranking(data, target):
     y = data.loc[:, target]
     feat_scores = DataFrame(columns=X.columns)
 
-    # Calculate the (a) Pearson correlation coefficient,
-    # (b) f-score, and (c) mutual information for each feature
+    # Calculate various measurements of relationship between each feature and
+    # the target. Choose (a) Pearson correlation coefficient, (b) f-score, and 
+    # (c) mutual information for their popularity.
     for col in X.columns:
         feat_scores.loc['pearson', col] = pearsonr(X.loc[:, col], y)[0]
     feat_scores.loc['f-score'] = fs.f_regression(X, y)[0]
@@ -46,24 +47,18 @@ def main():
     logger.info('Selecting features from data.')
 
     target = 'System_Load'
-    train_end = '2017-12'
-    num_features = 10
+    val_end = '2018-06'
+    num_features = 20
 
     data = load(logger)
-    core_predictors = list(data.columns[:16])
-    extra_predictors = list(data.columns[16:])
-    
-    # Only run feature selection algorithm on core predictors of training data
-    select_data = data.loc[:train_end, core_predictors]
-    feat_ranking = do_feat_ranking(select_data, target)
-    
+    # Only run feature selection algorithm on training and validation data
+    feat_ranking = do_feat_ranking(data.loc[:val_end], target)
     select_features = list(feat_ranking[:num_features].index)
-    print('>>> Core features selected:')
+    print('>>> Features selected:')
     print(select_features)
     
-    select_features.extend(extra_predictors)
     select_features.append(target)
-    final_data = data.loc[:, select_features] 
+    final_data = data.loc[:, select_features]
     
     final_data.to_csv(str(project_dir / "processed/select_features.csv"))
     logger.info('Features have been selected.')

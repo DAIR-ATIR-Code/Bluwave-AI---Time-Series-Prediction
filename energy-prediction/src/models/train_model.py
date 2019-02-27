@@ -71,11 +71,11 @@ def main():
     train = data.loc[:train_end]
     validate = data.loc[val_start:val_end]
     
-    all_params = {'num_hidden': [75, 150],
-                  'learn_rate': [0.01],
+    all_params = {'num_hidden': [75, 35],
+                  'learn_rate': [0.001],
                   'lambda': [0, 0.01],
                   'dropout': [0, 0.2],
-                  'num_epochs': [5000],
+                  'num_epochs': [10000],
                   'activation': ['relu']}
     
     num_gpus = len(backend.tensorflow_backend._get_available_gpus())
