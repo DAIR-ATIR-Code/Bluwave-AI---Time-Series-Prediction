@@ -6,7 +6,7 @@ import glob
 
 
 def load(logger):
-    # Integrate all data into one set
+    # Integrate all data into one set, sorting by timestamp
     folders = glob.glob(str(project_dir / "raw/*/"))
     folders.sort()
     if (len(folders) == 0):
@@ -31,6 +31,7 @@ def load(logger):
 def main():
     """ Integrates, cleans, and regularizes data from (../raw) into data
         ready for feature engineering, saved in (../interim).
+        Accompanying notebook is 01-clean.
     """
     logger = logging.getLogger(__name__)
     logger.info('Turning raw data into usable format.')
@@ -38,8 +39,9 @@ def main():
     raw = load(logger) 
     raw.to_csv(str(project_dir / "interim/integrated.csv"))
     
-    # Drop (a) redundant date and time columns, (b) unnecessary flag columns,
-    # (c) sparse Hmdx, Wind Chill, and Weather columns
+    # Drop (a) redundant date and time columns,
+    #      (b) unnecessary flag columns, and
+    #      (c) sparse Hmdx, Wind Chill, and Weather columns
     select = raw.iloc[:, [4, 6, 8, 10, 12, 14, 16]]
 
     # Interpolate missing data
@@ -54,7 +56,8 @@ def main():
     clean.to_csv(str(project_dir / "interim/clean.csv"))
     logger.info('Cleaned data set was saved.')
     
-    # Scale the measurements
+    # Scale the measurements so that all values have similar magnitudes.
+    # This helps optimization (gradient descent) work better.
     reg = clean.copy()
     minimum, maximum = reg.min(), reg.max()
     reg = (reg - minimum) / (maximum - minimum)

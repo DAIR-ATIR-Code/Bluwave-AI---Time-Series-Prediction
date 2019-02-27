@@ -8,6 +8,8 @@ sys.path.append(str(Path(__file__).resolve().parents[2] / "src/models/"))
 from train_model import create_and_fit_model
 
 
+# Backward recursive search incrementally removes the feature that,
+# when removed, achieves the best model performance. 
 def backward_search(data, target, num_features):
     features = list(data.columns)
     features.remove(target)
@@ -20,12 +22,15 @@ def backward_search(data, target, num_features):
             features_sub.remove(feat)
             metric = run_model_on_feature_subset(data, target, features_sub)
             feat_scores.loc[feat] = metric
+        # Remove feature whose removal achieved the best performance
         feat_round_ranking = feat_scores.sort_values()
         optimal_feature = feat_round_ranking.index[0]
         features.remove(optimal_feature)
     return features
 
 
+# Forward recursive search incrementally adds the feature that,
+# when added, achieves the best model performance. 
 def forward_search(data, target, num_features):
     features = list(data.columns)
     features.remove(target)
@@ -39,6 +44,7 @@ def forward_search(data, target, num_features):
             metric = run_model_on_feature_subset(data, target, features_sub)
             feat_scores.loc[feat] = metric
             features_sub.remove(feat)
+        # Add feature whose addition achieved the best performance
         feat_round_ranking = feat_scores.sort_values()
         optimal_feature = feat_round_ranking.index[0]
         features_sub.append(optimal_feature)
@@ -91,6 +97,8 @@ def main():
     logger.info('Selecting features from data.')
 
     target = 'Wind Spd (km/h)'
+    # We select 4 to demonstrate the algorithm, but in practice we
+    # would probably keep all 6 "core predictors"
     num_features = 4
     forward = False
     backward = True
@@ -99,7 +107,8 @@ def main():
     core_predictors = list(data.columns[:6])
     extra_predictors = list(data.columns[6:])
     
-    # Only run feature selection algorithm on core predictors
+    # Only run feature selection algorithm on core predictors, since
+    # including all predictors would be too expensive.
     select_data = data.loc[:, core_predictors]
     
     if (forward):

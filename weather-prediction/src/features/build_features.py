@@ -20,6 +20,8 @@ def load(logger):
 def main():
     """ Builds features on top of clean, regularized data from (../interim)
         and saves the data and features together in (../processed).
+        Accompanying notebooks are 02-explore-features and
+        03-inspect-trend-and-seasonality.
     """
     logger = logging.getLogger(__name__)
     logger.info('Creating features from data.')
@@ -39,13 +41,15 @@ def main():
     stats.loc['high'] = stats.loc['75%'] + (1.5 * stats.loc['IQR'])
 
     outliers = data.apply(lambda x: x[(x < stats.loc['low', x.name]) |
-                            (x > stats.loc['high', x.name])], axis=0)
+                                      (x > stats.loc['high', x.name])], axis=0)
     data.loc[:, 'Outlier'] = 0
     data.loc[outliers.index, 'Outlier'] = 1
     
     # Create features out of lagged target measurements
+    # Include lags of 1 and 2 hours based on partial autocorrelations
     data[target + ' [t-1hr]'] = data[target].shift(1)
     data[target + ' [t-2hr]'] = data[target].shift(2)
+    # Include lags of 12, 24, ... hours based on autocorrelations
     data[target + ' [t-12hr]'] = data[target].shift(12)
     data[target + ' [t-24hr]'] = data[target].shift(24)
     data[target + ' [t-36hr]'] = data[target].shift(36)
@@ -53,10 +57,12 @@ def main():
     data.dropna(inplace=True)
         
     # Create binary indicators for hour and month
+    # Encode hour of half-day because of strong half-day seasonality
     hour_names = ['H' + str(x+1) for x in range(12)]
     one_hot_hour = to_categorical(data.index.hour % 12)
     hour_df = DataFrame(one_hot_hour, index=data.index, columns=hour_names)
     
+    # Encode month of year because of strong yearly seasonality
     month_names = ['M' + str(x+1) for x in range(12)]
     one_hot_month = to_categorical(data.index.month - 1)
     month_df = DataFrame(one_hot_month, index=data.index, columns=month_names)
