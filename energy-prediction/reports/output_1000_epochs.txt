@@ -1,23 +1,0 @@
-python src/data/make_dataset.py
-python src/features/build_features.py
-python src/features/select_features.py
->>> Core features selected:
-['DA_Demand', 'System_Load [t-1hr]', 'System_Load [t-24hr]', 'System_Load [t-2hr]', 'System_Load [t-48hr]', 'DA_EC', 'RT_EC', 'Dry_Bulb', 'DA_MLC', 'Reg_Service_Price']
-python src/models/train_model.py
-1 GPU(s) available to keras.
->>> Model hyperparameters grid search:
-0/8 configurations1/8 configurations2/8 configurations3/8 configurations4/8 configurations5/8 configurations6/8 configurations7/8 configurations8/8 configurations
->>> Ranking of hyperparameter combinations:
-                                        loss  seconds
-(150, 0.01, 0, 0, 1000, relu)       0.000153     14.0
-(75, 0.01, 0, 0.2, 1000, relu)      0.000168     12.0
-(75, 0.01, 0, 0, 1000, relu)        0.000185     14.0
-(150, 0.01, 0, 0.2, 1000, relu)     0.000200     14.0
-(150, 0.01, 0.01, 0, 1000, relu)    0.000808     14.0
-(75, 0.01, 0.01, 0, 1000, relu)     0.000921     14.0
-(75, 0.01, 0.01, 0.2, 1000, relu)   0.001267     14.0
-(150, 0.01, 0.01, 0.2, 1000, relu)  0.001618     15.0
-python src/models/predict_model.py
->>> Prediction RMSE: 	231.9467
->>> Persistence RMSE: 	707.2314
-python src/visualization/visualize.py
