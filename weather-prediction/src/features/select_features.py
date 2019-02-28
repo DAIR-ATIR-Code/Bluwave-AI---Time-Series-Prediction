@@ -5,7 +5,7 @@ from pandas import Series, read_csv
 import tensorflow as tf
 import sys
 sys.path.append(str(Path(__file__).resolve().parents[2] / "src/models/"))
-from train_model import create_and_fit_model
+from train_model import build_and_train_model
 
 
 # Backward recursive search incrementally removes the feature that,
@@ -69,8 +69,8 @@ def run_model_on_feature_subset(data, target, features_sub):
               'dropout': 0.2,
               'num_epochs': 5000,
               'activation': tf.nn.relu}
-    sess, saver, history, metric, sec = create_and_fit_model(train, validate,
-                                                             params, target)
+    sess, saver, history, metric, sec = build_and_train_model(train, validate,
+                                                              params, target)
     sess.close()
     return metric
 
@@ -97,9 +97,9 @@ def main():
     logger.info('Selecting features from data.')
 
     target = 'Wind Spd (km/h)'
-    # We select 4 to demonstrate the algorithm, but in practice we
+    # We select 5 to demonstrate the algorithm, but in practice we
     # would probably keep all 6 "core predictors"
-    num_features = 4
+    num_features = 5
     forward = False
     backward = True
 
@@ -108,7 +108,7 @@ def main():
     extra_predictors = list(data.columns[6:])
     
     # Only run feature selection algorithm on core predictors, since
-    # including all predictors would be too expensive.
+    # including all predictors would be too expensive
     select_data = data.loc[:, core_predictors]
     
     if (forward):

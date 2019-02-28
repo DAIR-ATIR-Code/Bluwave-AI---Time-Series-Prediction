@@ -28,29 +28,36 @@ def main():
 
     target = 'System_Load'
     data = load(logger)
-    
+        
     # Drop columns with extremely high correlation
     data.drop(columns=['RT_Demand', 'DA_LMP', 'RT_LMP'], inplace=True)
     # Drop columns with extremely low variance
     data.drop(columns=['DA_CC', 'RT_CC', 'RT_EC', 'Reg_Capacity_Price'],
               inplace=True)
     
+    # Lag all cross-sectional data (everything except target) by 1
+    # For predicting target at time (t) we cannot access ANY data at time (t)!
+    for col in data.columns:
+        if (col != target):
+            data[col + ' [t-1hr]'] = data[col].shift(1)
+            data.pop(col)
+    data.dropna(inplace=True)
+    
     # Identify entries that include an outlier
     stats = data.describe()
     stats.loc['IQR'] = (stats.loc['75%'] - stats.loc['25%'])
     stats.loc['low'] = stats.loc['25%'] - (1.5 * stats.loc['IQR'])
     stats.loc['high'] = stats.loc['75%'] + (1.5 * stats.loc['IQR'])
-
-    outliers = data.apply(lambda x: x[(x < stats.loc['low', x.name]) |
-                                      (x > stats.loc['high', x.name])], axis=0)
+    # Do not include outliers of the target variable, or else data leaks
+    outliers = data.apply(lambda x: x[((x < stats.loc['low', x.name]) |
+                                      (x > stats.loc['high', x.name])) &
+                                      (x.name != target)], axis=0)
     data.loc[:, 'Outlier'] = 0
     data.loc[outliers.index, 'Outlier'] = 1
     
-    # Identify weekends, thinking it may have some effect on load
-    weekends = data.apply(lambda x: x.name.weekday() == 5 or
-                          x.name.weekday() == 6, axis=1)
-    data.loc[:, 'Weekend'] = 0
-    data.loc[weekends.index, 'Weekend'] = 1
+    # Identify weekends, which reasonably could affect load
+    data.loc[:, 'Weekend'] = data.apply(lambda x: int(x.name.weekday() == 5 or
+                                        x.name.weekday() == 6), axis=1)
     
     # Create features out of lagged target measurements
     # Include lags of 1 and 2 hours based on partial autocorrelations

@@ -6,6 +6,7 @@ from tensorflow import keras
 from numpy import sqrt
 import os
 
+# Reduce TensorFlow warnings about optimal CPU setup/usage
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
 
 
@@ -40,11 +41,14 @@ def load(logger, target):
     return data, clean_target, model
 
 
+# Reverse-normalize data
 def unnormalize(x, clean_data):
+    # Use min and max from data post-cleaning and pre-normalizing
     minimum, maximum = float(clean_data.min()), float(clean_data.max())
     return x * (maximum - minimum) + minimum
 
 
+# Calculate the root mean squared error (RMSE)
 def rmse(true, predicted):
     mse = ((true - predicted)**2).mean()
     return sqrt(mse)
@@ -66,7 +70,7 @@ def main():
     persistence = test.loc[:, [target, target + ' [t-1hr]']].copy()
     test.pop(target)
 
-    # Make predictions with model on test data
+    # Make predictions with model on test/prediction data
     predict_y = model.predict(test)[:, 0]
     predictions = Series(predict_y, index=test.index, name=target)
     
@@ -74,6 +78,9 @@ def main():
     norm_predictions = unnormalize(predictions, clean_target)
     norm_target = unnormalize(persistence, clean_target)
     
+    # Calculate error between true target values and
+    # - the trained model predictions
+    # - the naive predictor, persistence
     predict_rmse = rmse(norm_target.loc[:, target], norm_predictions)
     persist_rmse = rmse(norm_target.loc[:, target],
                         norm_target.loc[:, target + ' [t-1hr]'])

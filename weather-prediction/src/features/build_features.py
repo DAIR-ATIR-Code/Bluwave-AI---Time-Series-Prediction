@@ -34,14 +34,23 @@ def main():
     # Drop columns with extremely low variance
     data.pop('Visibility (km)')
     
+    # Lag all cross-sectional data (everything except target) by 1 hour
+    # For predicting target at time (t) we cannot access any data at time (t)!
+    for col in data.columns:
+        if (col != target):
+            data[col + ' [t-1hr]'] = data[col].shift(1)
+            data.pop(col)
+    data.dropna(inplace=True)
+
     # Identify entries that include an outlier
     stats = data.describe()
     stats.loc['IQR'] = (stats.loc['75%'] - stats.loc['25%'])
     stats.loc['low'] = stats.loc['25%'] - (1.5 * stats.loc['IQR'])
     stats.loc['high'] = stats.loc['75%'] + (1.5 * stats.loc['IQR'])
-
-    outliers = data.apply(lambda x: x[(x < stats.loc['low', x.name]) |
-                                      (x > stats.loc['high', x.name])], axis=0)
+    # Do not include outliers of the target variable, or else data leaks
+    outliers = data.apply(lambda x: x[((x < stats.loc['low', x.name]) |
+                                      (x > stats.loc['high', x.name])) &
+                                      (x.name != target)], axis=0)
     data.loc[:, 'Outlier'] = 0
     data.loc[outliers.index, 'Outlier'] = 1
     

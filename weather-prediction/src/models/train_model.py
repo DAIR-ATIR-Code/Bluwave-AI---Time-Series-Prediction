@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import logging
 from pathlib import Path
-from pandas import DataFrame, read_csv, concat
+from pandas import DataFrame, read_csv
 from numpy import arange, newaxis
 import tensorflow as tf
 from tensorflow.python.client import device_lib
@@ -9,59 +9,90 @@ from itertools import product
 import time
 import os
 
+# Reduce TensorFlow warnings about optimal CPU setup/usage
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
 
 
-def create_model(data, params):
+# Build feedforward neural network with one hidden layer
+# Various hyperparameters are given by the values in dictionary 'params'
+def build_model(data, params):
+    # Input size is the number of features
     num_inputs = len(data.columns) - 1
+    # Hidden layer should have number of nodes corresponding to the
+    # complexity of the system we want to model
     num_hidden = params['num_hidden']
+    # Output layer has one node because prediction is a single value
     num_outputs = 1
     
+    # Create placeholders, to which values will be assigned during training
     X = tf.placeholder('float', shape=[None, num_inputs])
     y = tf.placeholder('float', shape=[None, num_outputs])
     
-    # Initialize weights and biases
+    # Initialize weights as non-zero random numbers
     w1 = tf.Variable(tf.random_normal([num_inputs, num_hidden], stddev=0.1))
     w2 = tf.Variable(tf.random_normal([num_hidden, num_outputs], stddev=0.1))
+    # Initialize biases as zero
     b1 = tf.Variable(tf.zeros([num_hidden]))
     b2 = tf.Variable(tf.zeros([num_outputs]))
     
     # Forward propagation
+    # Activation function determines the value of the nodes in the layer
+    # Each layer is computed as: activation((<inputs> * w) + b)
     hidden_layer = params['activation'](tf.matmul(X, w1) + b1)
+    # Dropout is not a true layer, but randomly removes some % of hidden
+    # nodes to help the model generalize
     dropout_layer = tf.nn.dropout(hidden_layer, 1 - params['dropout'])
-    y_predict = tf.matmul(dropout_layer, w2) + b2
+    # Output layer has no activation function because we are building a
+    # regression model
+    output_layer = tf.matmul(dropout_layer, w2) + b2
     
     # Backward propagation
-    # Use MSE as the loss (objective) function
-    loss = tf.reduce_mean(tf.square(y - y_predict))
+    # Choose loss function to be MSE
+    loss = tf.reduce_mean(tf.square(y - output_layer))
+    # Perform L2 regularization, which punishes the loss function to help
+    # the model generalize. Lambda determines the degree of regularization
     reg = tf.nn.l2_loss(w1) + tf.nn.l2_loss(w2)
     reg_loss = tf.reduce_mean(loss + params['lambda'] * reg)
+    # Learning rate decides how quickly optimization (gradient descent) happens
     optimizer = tf.train.AdamOptimizer(learning_rate=params['learn_rate'])
+    # Setup model to optimize regularized loss function with Adam optimizer
     updates = optimizer.minimize(reg_loss)
-    return X, y, y_predict, reg_loss, updates
+    return X, y, output_layer, reg_loss, updates
 
 
-def create_and_fit_model(train, validate, params, target):
+# Train neural network created in build_model()
+def build_and_train_model(train, validate, params, target):
+    # Separate the target (y) from the input (X)
+    # Training data used to minimize the loss function and validation data
+    # used to calculate loss in each epoch. The model is somewhat biased toward
+    # the training data it is learning from, but the validation loss gives
+    # a fair sense of how well the model is learning and also generalizing.
     train_X = train.drop(columns=[target])
     train_y = train.loc[:, target][:, newaxis]
     validate_X = validate.drop(columns=[target])
     validate_y = validate.loc[:, target][:, newaxis]
     
     tf.reset_default_graph()
-    X, y, y_predict, loss, updates = create_model(train, params)
+    X, y, y_predict, loss, updates = build_model(train, params)
     hist = DataFrame(index=arange(params['num_epochs']),
                      columns=['train_loss', 'validate_loss'])
     
     start = time.time()
     sess = tf.Session()
     sess.run(tf.global_variables_initializer())
+    # Model runs through all the training data in each epoch, doing forward
+    # and backward propagation of weights. No batching because our dataset is
+    # small enough and optimization still performs well, so we achieve more
+    # efficiency this way.
     for epoch in range(params['num_epochs']):
-        sess.run(updates, feed_dict={X: train_X, y: train_y})
-
-        hist.loc[epoch, 'train_loss'] = \
-            sess.run(loss, feed_dict={X: train_X, y: train_y})
-        hist.loc[epoch, 'validate_loss'] = \
-            sess.run(loss, feed_dict={X: validate_X, y: validate_y})
+        # Run on training data to update model weights
+        _, train_loss = sess.run([updates, loss], feed_dict={X: train_X,
+                                                             y: train_y})
+        # Run on validation data to evaluate performance
+        validate_loss = sess.run(loss, feed_dict={X: validate_X,
+                                                  y: validate_y})
+        hist.loc[epoch, 'train_loss'] = train_loss
+        hist.loc[epoch, 'validate_loss'] = validate_loss
     seconds = time.time() - start
     metric = hist.loc[epoch, 'validate_loss']
     
@@ -99,11 +130,12 @@ def main():
     train = data.loc[:train_end]
     validate = data.loc[val_start:val_end]
     
-    all_params = {'num_hidden': [50, 100, 250],
+    # Determine all the hyperparameter options to optimize on
+    all_params = {'num_hidden': [50, 100],
                   'learn_rate': [0.001],
                   'lambda': [0, 0.01],
-                  'dropout': [0.2],
-                  'num_epochs': [7500],
+                  'dropout': [0, 0.1],
+                  'num_epochs': [10000],
                   'activation': [tf.nn.relu]}
     
     devices = [x.device_type for x in device_lib.list_local_devices()]
@@ -117,14 +149,17 @@ def main():
     count = 0
     min_model_metric = 1
     print('\r{}/{} configurations'.format(count, len(param_scores)), end='')
+    # Permute through the hyperparameters
     for variation in product(*values):
+        # Run the model with this set of hyperparameters
         params = dict(zip(keys, variation))
-        sess, saver, history, metric, sec = create_and_fit_model(train,
-                                                                 validate,
-                                                                 params,
-                                                                 target)
+        sess, saver, history, metric, sec = build_and_train_model(train,
+                                                                  validate,
+                                                                  params,
+                                                                  target)
         param_scores.loc[variation, 'loss'] = metric
         param_scores.loc[variation, 'seconds'] = int(sec)
+        # Save this model output if it has achieved minimal error thus far
         if (metric < min_model_metric):
             saver.save(sess, str(project_dir / "models/trained_model"))
             optimal_history = history
@@ -148,6 +183,7 @@ if __name__ == '__main__':
     logging.basicConfig(filename='out.log', level=logging.INFO, format=log_fmt)
     
     project_dir = Path(__file__).resolve().parents[2]
+    # Reduce TensorFlow verbosity
     tf.logging.set_verbosity(logging.WARN)
 
     main()

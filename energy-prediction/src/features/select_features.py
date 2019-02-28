@@ -12,7 +12,7 @@ def do_feat_ranking(data, target):
     feat_scores = DataFrame(columns=X.columns)
 
     # Calculate various measurements of relationship between each feature and
-    # the target. Choose (a) Pearson correlation coefficient, (b) f-score, and 
+    # the target. Choose (a) Pearson correlation coefficient, (b) f-score, and
     # (c) mutual information for their popularity.
     for col in X.columns:
         feat_scores.loc['pearson', col] = pearsonr(X.loc[:, col], y)[0]
