@@ -1,4 +1,4 @@
-.PHONY: clean data model predictions create_environment test_environment
+.PHONY: clean data features model predictions all create_environment test_environment
 
 #################################################################################
 # GLOBALS                                                                       #
@@ -19,22 +19,29 @@ endif
 # COMMANDS                                                                      #
 #################################################################################
 
-## Make dataset and features
+## Make dataset
 data:
 	@gunzip -r data/raw/*
 	python src/data/make_dataset.py
 	@gzip -r data/raw/*
+
+## Build and select features
+features:
 	python src/features/build_features.py
+	python src/models/train_model.py all
 	python src/features/select_features.py
 
 ## Do model training
 model:
-	python src/models/train_model.py
+	python src/models/train_model.py select
 
 ## Make predictions with trained model
 predictions:
 	python src/models/predict_model.py
 	python src/visualization/visualize.py
+
+## Run everything for building model
+all: data features model predictions
 
 ## Delete all compiled Python files and generated data and models
 clean:

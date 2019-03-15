@@ -1,7 +1,7 @@
-﻿canarie-time-series-prediction
-==============================
+﻿canarie-weather-time-series-prediction
+======================================
 
-A deployable reference solution for DAIR participants to observe and study application of machine learning techniques in time-series predictions.
+A deployable reference solution for DAIR participants to observe and study application of machine learning techniques in time-series predictions. This solution builds a wind speed predictor.
 
 Project Organization
 ------------

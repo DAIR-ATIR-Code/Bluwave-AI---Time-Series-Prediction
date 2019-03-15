@@ -6,7 +6,9 @@ from numpy import arange, newaxis
 import tensorflow as tf
 from tensorflow.python.client import device_lib
 from itertools import product
+import pickle
 import time
+import sys
 import os
 
 # Reduce TensorFlow warnings about optimal CPU setup/usage
@@ -102,14 +104,15 @@ def build_and_train_model(train, validate, params, target):
     return sess, saver, hist, metric, seconds
             
 
-def load(logger):
+def load(logger, which_features):
+    filename = which_features + '_features.csv'
     try:
-        data = read_csv(str(project_dir / "data/processed/select_features.csv"),
+        data = read_csv(str(project_dir / "data/processed" / filename),
                         parse_dates=True, infer_datetime_format=True,
                         index_col=0)
-        logger.info('Select features set was loaded.')
+        logger.info(which_features.capitalize() + ' features set was loaded.')
     except Exception:
-        logger.error('data/processed/select_features.csv could not be read.')
+        logger.error('data/processed/' + filename + ' could not be read.')
         raise ValueError('DataFrame is empty.')
     return data
 
@@ -126,28 +129,40 @@ def main():
     val_start = '2017-01'
     val_end = '2017-12'
     
-    data = load(logger)
+    if (len(sys.argv) < 2):
+        logger.warning('No feature set specified for training the model.')
+        logger.info('Model defaulted to training on all features.')
+        which_features = 'all'
+    elif not (sys.argv[1] == 'all' or sys.argv[1] == 'select'):
+        logger.warning('Invalid feature set specified for training the model.')
+        logger.info('Model defaulted to training on all features.')
+        which_features = 'all'
+    else:
+        which_features = sys.argv[1]
+    
+    data = load(logger, which_features)
     train = data.loc[:train_end]
     validate = data.loc[val_start:val_end]
     
     # Determine all the hyperparameter options to optimize on
-    all_params = {'num_hidden': [50, 100],
-                  'learn_rate': [0.001],
-                  'lambda': [0, 0.01],
-                  'dropout': [0, 0.1],
+    all_params = {'num_hidden': [5, 50],
+                  'learn_rate': [0.001, 0.01],
+                  'lambda': [0],
+                  'dropout': [0],
                   'num_epochs': [10000],
                   'activation': [tf.nn.relu]}
     
     devices = [x.device_type for x in device_lib.list_local_devices()]
     num_gpus = devices.count('GPU')
     print('{} GPU(s) available to TensorFlow.'.format(num_gpus))
+    print('Model training on ' + which_features + ' features.')
 
     # Basic grid search of hyperparameters
     keys, values = zip(*all_params.items())
     param_scores = DataFrame(index=product(*values))
     print('>>> Model hyperparameters grid search:')
     count = 0
-    min_model_metric = 1
+    optimal_metric = 2
     print('\r{}/{} configurations'.format(count, len(param_scores)), end='')
     # Permute through the hyperparameters
     for variation in product(*values):
@@ -160,10 +175,12 @@ def main():
         param_scores.loc[variation, 'loss'] = metric
         param_scores.loc[variation, 'seconds'] = int(sec)
         # Save this model output if it has achieved minimal error thus far
-        if (metric < min_model_metric):
-            saver.save(sess, str(project_dir / "models/trained_model"))
+        if (metric < optimal_metric):
+            model_filename = 'trained_model_' + which_features + '_features'
+            saver.save(sess, str(project_dir / "models" / model_filename))
             optimal_history = history
-            min_model_metric = metric
+            optimal_params = params
+            optimal_metric = metric
         sess.close()
         count = count + 1
         print('\r{}/{} configurations'.format(count, len(param_scores)),
@@ -174,7 +191,11 @@ def main():
     print(params_ranking)
     
     logger.info('Hyperparameters tuned.')
-    optimal_history.to_csv(str(project_dir / "models/training_history.csv"))
+    history_filename = 'training_history_' + which_features + '_features.csv'
+    optimal_history.to_csv(str(project_dir / "models" / history_filename))
+    params_filename = 'model_params_' + which_features + '_features.pkl'
+    with open(str(project_dir / "models" / params_filename), 'wb') as f:
+        pickle.dump(optimal_params, f)
     logger.info('Trained model saved.')
    
 

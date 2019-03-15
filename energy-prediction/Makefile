@@ -1,4 +1,4 @@
-.PHONY: clean data model predictions create_environment test_environment
+.PHONY: clean data model predictions all create_environment test_environment
 
 #################################################################################
 # GLOBALS                                                                       #
@@ -35,6 +35,9 @@ model:
 predictions:
 	python src/models/predict_model.py
 	python src/visualization/visualize.py
+
+## Run everything for building model
+all: data model predictions
 
 ## Delete all compiled Python files and generated data and models
 clean:

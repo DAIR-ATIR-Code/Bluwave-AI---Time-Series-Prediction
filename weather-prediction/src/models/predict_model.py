@@ -32,12 +32,12 @@ def load(logger, target):
         
     try:
         sess = tf.Session()
-        path = str(project_dir / "models/trained_model")
+        path = str(project_dir / "models/trained_model_select_features")
         saver = tf.train.import_meta_graph(path + ".meta")
         saver.restore(sess, path)
         logger.info('Trained model was loaded.')
     except Exception:
-        logger.error('models/trained_model.meta could not be loaded.')
+        logger.error('models/trained_model_select_features.meta could not be loaded.')
         raise ValueError('Model is unavailable.')
         
     return data, clean_target, sess

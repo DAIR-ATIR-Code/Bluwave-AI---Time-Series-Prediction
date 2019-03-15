@@ -102,9 +102,9 @@ def main():
     validate = data.loc[val_start:val_end]
     
     # Determine all the hyperparameter options to optimize on
-    all_params = {'num_hidden': [75, 35],
-                  'learn_rate': [0.001],
-                  'lambda': [0, 0.01],
+    all_params = {'num_hidden': [5, 50],
+                  'learn_rate': [0.001, 0.01],
+                  'lambda': [0],
                   'dropout': [0, 0.2],
                   'num_epochs': [10000],
                   'activation': ['relu']}
@@ -117,7 +117,7 @@ def main():
     param_scores = DataFrame(index=product(*values))
     print('>>> Model hyperparameters grid search:')
     count = 0
-    min_model_metric = 1
+    optimal_metric = 2
     print('\r{}/{} configurations'.format(count, len(param_scores)), end='')
     # Permute through the hyperparameters
     for variation in product(*values):
@@ -128,10 +128,10 @@ def main():
         param_scores.loc[variation, 'loss'] = metric
         param_scores.loc[variation, 'seconds'] = int(sec)
         # Save this model output if it has achieved minimal error thus far
-        if (metric < min_model_metric):
+        if (metric < optimal_metric):
             optimal_model = model
             optimal_history = history
-            min_model_metric = metric
+            optimal_metric = metric
         count = count + 1
         print('\r{}/{} configurations'.format(count, len(param_scores)),
               end='')
