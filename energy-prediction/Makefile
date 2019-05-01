@@ -21,9 +21,7 @@ endif
 
 ## Make dataset and features
 data:
-	@gunzip -r data/raw/*
 	python src/data/make_dataset.py
-	@gzip -r data/raw/*
 	python src/features/build_features.py
 	python src/features/select_features.py
 
@@ -44,6 +42,8 @@ clean:
 	find . -type f -name "*.py[co]" -delete
 	find . -type d -name "__pycache__" -delete
 	find . -type d -name "out.log" -delete
+	rm data/raw/*.xls
+	rm data/raw/*.csv
 	rm data/interim/*.csv
 	rm data/processed/*.csv
 	rm models/*.csv
