@@ -62,11 +62,11 @@ ifeq ($(OS),Windows_NT)
 	@echo ">>> Windows detected. Please switch to UNIX system."
 else
 	conda env create -f env.yaml
+	@echo ">>> New conda env created. Activate with: conda activate $(PROJECT_NAME)"
 endif
 else
 	@echo ">>> Conda not detected. Please install to proceed."
 endif
-	@echo ">>> New conda env created. Activate with: conda activate $(PROJECT_NAME)"
 
 ## Test python environment is setup correctly
 test_environment:
