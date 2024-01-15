@@ -1,0 +1,1 @@
+The Time-Series Prediction with Machine Learning BoosterPack provides a deployable Sample Solution that allows users to observe and study the application of Machine Learning to solve the problem of developing models that provide predictions for Time-Series.
